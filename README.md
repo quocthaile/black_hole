@@ -1,71 +1,124 @@
-# **black**_**hole**
+# black_hole
 
-Black hole simulation project
+Black hole simulation with independent development and preserved baseline executables.
+This restructuring is not a performance optimization: physics algorithms, numerical
+constants, shader precision, and GLSL versions are unchanged.
 
-Here is the black hole raw code, everything will be inside a src bin incase you want to copy the files
+## Source layout and baseline provenance
 
-I'm writing this as I'm beginning this project (hopefully I complete it ;D) here is what I plan to do:
+```text
+CMakeLists.txt
+README.md
+vcpkg.json
+src/
+  black_hole.cpp
+  2D_lensing.cpp
+  baseline/
+    black_hole.cpp
+    2D_lensing.cpp
+    CPU-geodesic.cpp
+    ray_tracing.cpp
+    geodesic.comp
+    grid.vert
+    grid.frag
+shaders/
+  geodesic.comp
+  grid.vert
+  grid.frag
+```
 
-1. Ray-tracing : add ray tracing to the gravity simulation to simulate gravitational lensing
+The baseline is preserved from [quocthaile/black_hole](https://github.com/quocthaile/black_hole)
+at commit [`dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317`](https://github.com/quocthaile/black_hole/tree/dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317),
+the `main` revision used for this restructuring. All seven baseline files retain
+the original contents. Development sources and shaders start as independent copies.
+Keep `src/baseline/` unchanged so future computational-cost benchmarks and numerical
+accuracy comparisons have a stable reference. No benchmark instrumentation is added.
 
-2. Accretion disk : simulate accreciate disk using the ray tracing + the halos
+The source organization and small CMake target helper follow
+[gravity_sim](https://github.com/quocthaile/gravity_sim/tree/c98dcd55958420b88e6c5193e954e71ee3f8b574).
+This project retains its own C++17 requirement and dependencies.
+`CPU-geodesic.cpp` and `ray_tracing.cpp` remain reference sources without build targets.
+Other historical files, including the root executable/archive and `vs_code/` examples,
+are retained; use the CMake workflow below for the new layout.
 
-3. Spacetime curvature : demonstrate visually the "trapdoor in spacetime" that is black holes using spacetime grid
+## Build
 
-4. [optional] try to make it run realtime ;D
+Requirements: CMake 3.21+, a C++17 compiler, GLFW, GLEW, GLM, and OpenGL.
+The 3D runtime requires OpenGL 4.3 with compute shaders. The 2D program uses legacy
+OpenGL rendering. MSVC builds use `/utf-8` to preserve original Unicode identifiers.
 
-I hope it works :/
+Windows PowerShell with Visual Studio and vcpkg (adjust the vcpkg path):
 
-Edit: After completion of project -
+```powershell
+git clone https://github.com/quocthaile/black_hole.git
+cd black_hole
+$env:VCPKG_ROOT = 'C:/vcpkg'
+cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+cmake --build build --config Release
+```
 
-## **Building Requirements:**
+The manifest installs the existing dependencies automatically. To select a generator
+explicitly, add e.g. `-G "Visual Studio 18 2026" -A x64` to configuration.
+Build any executable independently:
 
-1. C++ Compiler supporting C++ 17 or newer
+```powershell
+cmake --build build --config Release --target BlackHole3D
+cmake --build build --config Release --target BlackHole2D
+cmake --build build --config Release --target BlackHole3D_baseline
+cmake --build build --config Release --target BlackHole2D_baseline
+```
 
-2. [Cmake](https://cmake.org/)
+For a single-configuration generator, run from a compiler-enabled shell (such as
+Developer PowerShell for Visual Studio on Windows):
 
-3. [Vcpkg](https://vcpkg.io/en/)
+```powershell
+cmake -S . -B build-ninja -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+cmake --build build-ninja --target BlackHole3D BlackHole2D BlackHole3D_baseline BlackHole2D_baseline
+```
 
-4. [Git](https://git-scm.com/)
-
-## **Build Instructions:**
-
-1. Clone the repository:
-	-  `git clone https://github.com/kavan010/black_hole.git`
-2. CD into the newly cloned directory
-	- `cd ./black_hole` 
-3. Install dependencies with Vcpkg
-	- `vcpkg install`
-4. Get the vcpkg cmake toolchain file path
-	- `vcpkg integrate install`
-	- This will output something like : `CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake"`
-5. Create a build directory
-	- `mkdir build`
-6. Configure project with CMake
-	-  `cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake`
-	- Use the vcpkg cmake toolchain path from above
-7. Build the project
-	- `cmake --build build`
-8. Run the program
-	- The executables will be located in the build folder
-
-### Alternative: Debian/Ubuntu apt workaround
-
-If you don't want to use vcpkg, or you just need a quick way to install the native development packages on Debian/Ubuntu, install these packages and then run the normal CMake steps above:
+On Debian/Ubuntu, native packages can replace vcpkg:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake \
-	libglew-dev libglfw3-dev libglm-dev libgl1-mesa-dev
+sudo apt install build-essential cmake libglew-dev libglfw3-dev libglm-dev libgl1-mesa-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-This provides the GLEW, GLFW, GLM and OpenGL development files so `find_package(...)` calls in `CMakeLists.txt` can locate the libraries. After installing, run the `cmake -B build -S .` and `cmake --build build` commands as shown in the Build Instructions.
+## Executables and runtime assets
 
-## **How the code works:**
-for 2D: simple, just run 2D_lensing.cpp with the nessesary dependencies installed.
+| Target | Source | Shader source |
+| --- | --- | --- |
+| `BlackHole3D` | `src/black_hole.cpp` | `shaders/` |
+| `BlackHole2D` | `src/2D_lensing.cpp` | None |
+| `BlackHole3D_baseline` | `src/baseline/black_hole.cpp` | `src/baseline/` |
+| `BlackHole2D_baseline` | `src/baseline/2D_lensing.cpp` | None |
 
-for 3D: black_hole.cpp and geodesic.comp work together to run the simuation faster using GPU, essentially it sends over a UBO and geodesic.comp runs heavy calculations using that data.
+Every target links dependencies independently. Executables are placed in
+`<build>/bin/<configuration>/<target>/`, including for single-configuration builds
+with `CMAKE_BUILD_TYPE` set. If that setting is empty, the configuration segment is
+omitted. Each 3D target stages its own three shaders beside its executable using
+`copy_if_different` and a target-specific `POST_BUILD` command. A staging dependency
+also refreshes shaders on builds where only shader files changed and no relink occurs.
+Development and baseline runtime assets never share an output directory.
 
-should work with nessesary dependencies installed, however I have only run it on windows with my GPU so am not sure!
+Shader loading still uses the original relative filenames. **Run each executable
+with its own executable directory as the working directory.** Generated Visual Studio
+projects set `VS_DEBUGGER_WORKING_DIRECTORY` accordingly. For other IDE/debug launch
+configurations, set the working directory explicitly to the same directory.
 
-LMK if you would like an in-depth explanation of how the code works aswell :)
+Run and smoke-test both 3D variants in PowerShell (close each window to continue):
+
+```powershell
+Push-Location build/bin/Release/BlackHole3D
+try { ./BlackHole3D.exe } finally { Pop-Location }
+Push-Location build/bin/Release/BlackHole3D_baseline
+try { ./BlackHole3D_baseline.exe } finally { Pop-Location }
+```
+
+For Ninja, replace `build` with `build-ninja`; on Linux omit `.exe`.
+The 2D executables can be launched from their corresponding target directories.
+The preserved 2D scene initially has no rays because its original ray initialization
+is commented out. Check both 3D windows render and that their consoles show an OpenGL
+version without file-loading, shader-compilation, or shader-link errors. Building
+successfully alone does not validate graphics runtime behavior or numerical accuracy.
