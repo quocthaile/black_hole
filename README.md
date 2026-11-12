@@ -12,7 +12,6 @@ README.md
 vcpkg.json
 src/
   black_hole.cpp
-  2D_lensing.cpp
   baseline/
     black_hole.cpp
     2D_lensing.cpp
@@ -44,7 +43,7 @@ are retained; use the CMake workflow below for the new layout.
 ## Build
 
 Requirements: CMake 3.21+, a C++17 compiler, GLFW, GLEW, GLM, and OpenGL.
-The 3D runtime requires OpenGL 4.3 with compute shaders. The 2D program uses legacy
+The 3D runtime requires OpenGL 4.3 with compute shaders. The 2D baseline uses legacy
 OpenGL rendering. MSVC builds use `/utf-8` to preserve original Unicode identifiers.
 
 Windows PowerShell with Visual Studio and vcpkg (adjust the vcpkg path):
@@ -63,7 +62,6 @@ Build any executable independently:
 
 ```powershell
 cmake --build build --config Release --target BlackHole3D
-cmake --build build --config Release --target BlackHole2D
 cmake --build build --config Release --target BlackHole3D_baseline
 cmake --build build --config Release --target BlackHole2D_baseline
 ```
@@ -73,7 +71,7 @@ Developer PowerShell for Visual Studio on Windows):
 
 ```powershell
 cmake -S . -B build-ninja -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-cmake --build build-ninja --target BlackHole3D BlackHole2D BlackHole3D_baseline BlackHole2D_baseline
+cmake --build build-ninja --target BlackHole3D BlackHole3D_baseline BlackHole2D_baseline
 ```
 
 On Debian/Ubuntu, native packages can replace vcpkg:
@@ -90,7 +88,6 @@ cmake --build build
 | Target | Source | Shader source |
 | --- | --- | --- |
 | `BlackHole3D` | `src/black_hole.cpp` | `shaders/` |
-| `BlackHole2D` | `src/2D_lensing.cpp` | None |
 | `BlackHole3D_baseline` | `src/baseline/black_hole.cpp` | `src/baseline/` |
 | `BlackHole2D_baseline` | `src/baseline/2D_lensing.cpp` | None |
 
@@ -117,8 +114,8 @@ try { ./BlackHole3D_baseline.exe } finally { Pop-Location }
 ```
 
 For Ninja, replace `build` with `build-ninja`; on Linux omit `.exe`.
-The 2D executables can be launched from their corresponding target directories.
-The preserved 2D scene initially has no rays because its original ray initialization
-is commented out. Check both 3D windows render and that their consoles show an OpenGL
-version without file-loading, shader-compilation, or shader-link errors. Building
-successfully alone does not validate graphics runtime behavior or numerical accuracy.
+The 2D baseline can be launched from its target directory. Its preserved scene
+initially has no rays because its original ray initialization is commented out.
+Check both 3D windows render and that their consoles show an OpenGL version without
+file-loading, shader-compilation, or shader-link errors. Building successfully alone
+does not validate graphics runtime behavior or numerical accuracy.

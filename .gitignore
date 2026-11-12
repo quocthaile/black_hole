@@ -145,3 +145,9 @@ _deps
 
 # Vcpkg
 vcpkg_installed
+
+# Build directories
+build/*
+
+###### Visual Studio
+.vs

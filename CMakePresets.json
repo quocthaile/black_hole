@@ -1,0 +1,41 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 2,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "msvc-vs2026",
+      "displayName": "MSVC Visual Studio 2026 - x64",
+      "generator": "Visual Studio 18 2026",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "binaryDir": "${sourceDir}/build/msvc-vs2026",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "type": "FILEPATH"
+        },
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-debug",
+      "displayName": "MSVC Debug",
+      "configurePreset": "msvc-vs2026",
+      "configuration": "Debug"
+    },
+    {
+      "name": "msvc-release",
+      "displayName": "MSVC Release",
+      "configurePreset": "msvc-vs2026",
+      "configuration": "Release"
+    }
+  ]
+}
