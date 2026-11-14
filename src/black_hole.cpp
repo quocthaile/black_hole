@@ -3,6 +3,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <cstdlib>
 #include <vector>
 #include <iostream>
 #define _USE_MATH_DEFINES
@@ -16,8 +19,6 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-using namespace glm;
-using namespace std;
 using Clock = std::chrono::high_resolution_clock;
 
 // VARS
@@ -30,7 +31,7 @@ bool Gravity = false;
 
 struct Camera {
     // Center the camera orbit on the black hole at (0, 0, 0)
-    vec3 target = vec3(0.0f, 0.0f, 0.0f); // Always look at the black hole center
+    glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f); // Always look at the black hole center
     float radius = 6.34194e10f;
     float minRadius = 1e10f, maxRadius = 1e12f;
 
@@ -47,18 +48,19 @@ struct Camera {
     double lastX = 0.0, lastY = 0.0;
 
     // Calculate camera position in world space
-    vec3 position() const {
+    glm::vec3 position() const {
         float clampedElevation = glm::clamp(elevation, 0.01f, float(M_PI) - 0.01f);
         // Orbit around (0,0,0) always
-        return vec3(
-            radius * sin(clampedElevation) * cos(azimuth),
-            radius * cos(clampedElevation),
-            radius * sin(clampedElevation) * sin(azimuth)
+        return glm::vec3(
+            radius * std::sin(clampedElevation) * std::cos(azimuth),
+            radius * std::cos(clampedElevation),
+            radius * std::sin(clampedElevation) * std::sin(azimuth)
         );
     }
+    // Refresh orbit state after input; the target remains the black hole center.
     void update() {
         // Always keep target at black hole center
-        target = vec3(0.0f, 0.0f, 0.0f);
+        target = glm::vec3(0.0f, 0.0f, 0.0f);
         if(dragging | panning) {
             moving = true;
         } else {
@@ -66,6 +68,7 @@ struct Camera {
         }
     }
 
+    // Convert cursor displacement into orbit angles, then remember the cursor position.
     void processMouseMove(double x, double y) {
         float dx = float(x - lastX);
         float dy = float(y - lastY);
@@ -85,6 +88,7 @@ struct Camera {
         lastY = y;
         update();
     }
+    // Handle orbit dragging and the original right-button gravity toggle.
     void processMouseButton(int button, int action, int mods, GLFWwindow* win) {
         if (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_MIDDLE) {
             if (action == GLFW_PRESS) {
@@ -105,27 +109,31 @@ struct Camera {
             }
         }
     }
+    // Change orbit radius within the original limits; xoffset is intentionally unused.
     void processScroll(double xoffset, double yoffset) {
         radius -= yoffset * zoomSpeed;
         radius = glm::clamp(radius, minRadius, maxRadius);
         update();
     }
+    // Toggle scene gravity on a G press; this does not change the ray equations.
     void processKey(int key, int scancode, int action, int mods) {
         if (action == GLFW_PRESS && key == GLFW_KEY_G) {
             Gravity = !Gravity;
-            cout << "[INFO] Gravity turned " << (Gravity ? "ON" : "OFF") << endl;
+            std::cout << "[INFO] Gravity turned " << (Gravity ? "ON" : "OFF") << std::endl;
         }
     }
 };
 Camera camera;
 
 struct BlackHole {
-    vec3 position;
+    glm::vec3 position;
     double mass;
     double radius;
     double r_s;
 
-    BlackHole(vec3 pos, float m) : position(pos), mass(m) {r_s = 2.0 * G * mass / (c*c);}
+    // Compute the Schwarzschild radius from the original SI mass and constants.
+    BlackHole(glm::vec3 pos, float m) : position(pos), mass(m) {r_s = 2.0 * G * mass / (c*c);}
+    // Return whether the supplied Cartesian point lies inside the horizon sphere.
     bool Intercept(float px, float py, float pz) const {
         double dx = double(px) - double(position.x);
         double dy = double(py) - double(position.y);
@@ -134,17 +142,17 @@ struct BlackHole {
         return dist2 < r_s * r_s;
     }
 };
-BlackHole SagA(vec3(0.0f, 0.0f, 0.0f), 8.54e36); // Sagittarius A black hole
+BlackHole SagA(glm::vec3(0.0f, 0.0f, 0.0f), 8.54e36); // Sagittarius A black hole
 struct ObjectData {
-    vec4 posRadius; // xyz = position, w = radius
-    vec4 color;     // rgb = color, a = unused
+    glm::vec4 posRadius; // xyz = position, w = radius
+    glm::vec4 color;     // rgb = color, a = unused
     float  mass;
-    vec3 velocity = vec3(0.0f, 0.0f, 0.0f); // Initial velocity
+    glm::vec3 velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Initial velocity
 };
-vector<ObjectData> objects = {
-    { vec4(4e11f, 0.0f, 0.0f, 4e10f)   , vec4(1,1,0,1), 1.98892e30 },
-    { vec4(0.0f, 0.0f, 4e11f, 4e10f)   , vec4(1,0,0,1), 1.98892e30 },
-    { vec4(0.0f, 0.0f, 0.0f, SagA.r_s) , vec4(0,0,0,1), static_cast<float>(SagA.mass)  },
+std::vector<ObjectData> objects = {
+    { glm::vec4(4e11f, 0.0f, 0.0f, 4e10f)   , glm::vec4(1,1,0,1), 1.98892e30 },
+    { glm::vec4(0.0f, 0.0f, 4e11f, 4e10f)   , glm::vec4(1,0,0,1), 1.98892e30 },
+    { glm::vec4(0.0f, 0.0f, 0.0f, SagA.r_s) , glm::vec4(0,0,0,1), static_cast<float>(SagA.mass)  },
     //{ vec4(6e10f, 0.0f, 0.0f, 5e10f), vec4(0,1,0,1) }
 };
 
@@ -173,31 +181,33 @@ struct Engine {
     float width = 100000000000.0f; // Width of the viewport in meters
     float height = 75000000000.0f; // Height of the viewport in meters
     
+    // Create the OpenGL 4.3 context, shader programs, UBOs, quad and output texture.
+    // Shader filenames resolve against the process working directory.
     Engine() {
         if (!glfwInit()) {
-            cerr << "GLFW init failed\n";
-            exit(EXIT_FAILURE);
+            std::cerr << "GLFW init failed\n";
+            std::exit(EXIT_FAILURE);
         }
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         window = glfwCreateWindow(WIDTH, HEIGHT, "Black Hole", nullptr, nullptr);
         if (!window) {
-            cerr << "Failed to create GLFW window\n";
+            std::cerr << "Failed to create GLFW window\n";
             glfwTerminate();
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
         glfwMakeContextCurrent(window);
         glewExperimental = GL_TRUE;
         GLenum glewErr = glewInit();
         if (glewErr != GLEW_OK) {
-            cerr << "Failed to initialize GLEW: "
+            std::cerr << "Failed to initialize GLEW: "
                 << (const char*)glewGetErrorString(glewErr)
                 << "\n";
             glfwTerminate();
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
-        cout << "OpenGL " << glGetString(GL_VERSION) << "\n";
+        std::cout << "OpenGL " << glGetString(GL_VERSION) << "\n";
         this->shaderProgram = CreateShaderProgram();
         gridShaderProgram = CreateShaderProgram("grid.vert", "grid.frag");
 
@@ -217,7 +227,7 @@ struct Engine {
         // allocate space for 16 objects: 
         // sizeof(int) + padding + 16×(vec4 posRadius + vec4 color)
         GLsizeiptr objUBOSize = sizeof(int) + 3 * sizeof(float)
-            + 16 * (sizeof(vec4) + sizeof(vec4))
+            + 16 * (sizeof(glm::vec4) + sizeof(glm::vec4))
             + 16 * sizeof(float); // 16 floats for mass
         glBufferData(GL_UNIFORM_BUFFER, objUBOSize, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, 3, objectsUBO);  // binding = 3 matches shader
@@ -226,12 +236,14 @@ struct Engine {
         this->quadVAO = result[0];
         this->texture = result[1];
     }
-    void generateGrid(const vector<ObjectData>& objects) {
+    // Rebuild the warped grid from scene objects and upload vertices/indices each frame.
+    // This historical visualization is not a validated spacetime geometry solver.
+    void generateGrid(const std::vector<ObjectData>& objects) {
         const int gridSize = 25;
         const float spacing = 1e10f;  // tweak this
 
-        vector<vec3> vertices;
-        vector<GLuint> indices;
+        std::vector<glm::vec3> vertices;
+        std::vector<GLuint> indices;
 
         for (int z = 0; z <= gridSize; ++z) {
             for (int x = 0; x <= gridSize; ++x) {
@@ -242,22 +254,22 @@ struct Engine {
 
                 // ✅ Warp grid using Schwarzschild geometry
                 for (const auto& obj : objects) {
-                    vec3 objPos = vec3(obj.posRadius);
+                    glm::vec3 objPos = glm::vec3(obj.posRadius);
                     double mass = obj.mass;
                     double radius = obj.posRadius.w;
 
                     double r_s = 2.0 * G * mass / (c * c);
                     double dx = worldX - objPos.x;
                     double dz = worldZ - objPos.z;
-                    double dist = sqrt(dx * dx + dz * dz);
+                    double dist = std::sqrt(dx * dx + dz * dz);
 
                     // prevent sqrt of negative or divide-by-zero (inside or at the black hole center)
                     if (dist > r_s) {
-                        double deltaY = 2.0 * sqrt(r_s * (dist - r_s));
+                        double deltaY = 2.0 * std::sqrt(r_s * (dist - r_s));
                         y += static_cast<float>(deltaY) - 3e10f;
                     } else {
                         // 🔴 For points inside or at r_s: make it dip down sharply
-                        y += 2.0f * static_cast<float>(sqrt(r_s * r_s)) - 3e10f;  // or add a deep pit
+                        y += 2.0f * static_cast<float>(std::sqrt(r_s * r_s)) - 3e10f;  // or add a deep pit
                     }
                 }
 
@@ -285,19 +297,20 @@ struct Engine {
         glBindVertexArray(gridVAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vec3), vertices.data(), GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_DYNAMIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gridEBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
 
         glEnableVertexAttribArray(0); // location = 0
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
         gridIndexCount = indices.size();
 
         glBindVertexArray(0);
     }
-    void drawGrid(const mat4& viewProj) {
+    // Draw the uploaded line grid using the supplied view-projection matrix.
+    void drawGrid(const glm::mat4& viewProj) {
         glUseProgram(gridShaderProgram);
         glUniformMatrix4fv(glGetUniformLocation(gridShaderProgram, "viewProj"),
                         1, GL_FALSE, glm::value_ptr(viewProj));
@@ -312,6 +325,7 @@ struct Engine {
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
     }
+    // Sample the compute output texture and blend it over the previously drawn grid.
     void drawFullScreenQuad() {
         glUseProgram(shaderProgram); // fragment + vertex shader
         glBindVertexArray(quadVAO);
@@ -324,6 +338,8 @@ struct Engine {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);  // 2 triangles
         glEnable(GL_DEPTH_TEST);
     }
+    // Build the embedded GLSL 330 screen pass and return its program handle.
+    // The original screen pass does not check compilation/link status.
     GLuint CreateShaderProgram(){
         const char* vertexShaderSource = R"(
         #version 330 core
@@ -364,12 +380,13 @@ struct Engine {
 
         return shaderProgram;
     };
+    // Load and compile the two grid shader files; exit on a load/compile/link error.
     GLuint CreateShaderProgram(const char* vertPath, const char* fragPath) {
         auto loadShader = [](const char* path, GLenum type) -> GLuint {
             std::ifstream in(path);
             if (!in.is_open()) {
                 std::cerr << "Failed to open shader: " << path << "\n";
-                exit(EXIT_FAILURE);
+                std::exit(EXIT_FAILURE);
             }
             std::stringstream ss;
             ss << in.rdbuf();
@@ -388,7 +405,7 @@ struct Engine {
                 std::vector<char> log(logLen);
                 glGetShaderInfoLog(shader, logLen, nullptr, log.data());
                 std::cerr << "Shader compile error (" << path << "):\n" << log.data() << "\n";
-                exit(EXIT_FAILURE);
+                std::exit(EXIT_FAILURE);
             }
             return shader;
         };
@@ -409,7 +426,7 @@ struct Engine {
             std::vector<char> log(logLen);
             glGetProgramInfoLog(program, logLen, nullptr, log.data());
             std::cerr << "Shader link error:\n" << log.data() << "\n";
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
 
         glDeleteShader(vertShader);
@@ -417,12 +434,13 @@ struct Engine {
 
         return program;
     }
+    // Compile the geodesic compute file and return its linked program handle.
     GLuint CreateComputeProgram(const char* path) {
         // 1) read GLSL source
         std::ifstream in(path);
         if(!in.is_open()) {
             std::cerr << "Failed to open compute shader: " << path << "\n";
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
         std::stringstream ss;
         ss << in.rdbuf();
@@ -441,7 +459,7 @@ struct Engine {
             std::vector<char> log(logLen);
             glGetShaderInfoLog(cs, logLen, nullptr, log.data());
             std::cerr << "Compute shader compile error:\n" << log.data() << "\n";
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
 
         // 3) link
@@ -455,12 +473,15 @@ struct Engine {
             std::vector<char> log(logLen);
             glGetProgramInfoLog(prog, logLen, nullptr, log.data());
             std::cerr << "Compute shader link error:\n" << log.data() << "\n";
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
 
         glDeleteShader(cs);
         return prog;
     }
+    // Upload scene inputs, allocate the image and dispatch the original 200 x 150 rays.
+    // Preserve the original image-access barrier; texture-fetch visibility needs a
+    // separate future synchronization audit, not an algorithm change in M0.
     void dispatchCompute(const Camera& cam) {
         // determine target compute‐res
         int cw = cam.moving ? COMPUTE_WIDTH  : 200;
@@ -494,46 +515,49 @@ struct Engine {
         // 5) sync
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     }
+    // Pack the camera basis/FOV for binding 1. Original padding and bool layout remain.
     void uploadCameraUBO(const Camera& cam) {
         struct UBOData {
-            vec3 pos; float _pad0;
-            vec3 right; float _pad1;
-            vec3 up; float _pad2;
-            vec3 forward; float _pad3;
+            glm::vec3 pos; float _pad0;
+            glm::vec3 right; float _pad1;
+            glm::vec3 up; float _pad2;
+            glm::vec3 forward; float _pad3;
             float tanHalfFov;
             float aspect;
             bool moving;
             int _pad4;
         } data;
-        vec3 fwd = normalize(cam.target - cam.position());
-        vec3 up = vec3(0, 1, 0); // y axis is up, so disk is in x-z plane
-        vec3 right = normalize(cross(fwd, up));
-        up = cross(right, fwd);
+        glm::vec3 fwd = glm::normalize(cam.target - cam.position());
+        glm::vec3 up = glm::vec3(0, 1, 0); // y axis is up, so disk is in x-z plane
+        glm::vec3 right = glm::normalize(glm::cross(fwd, up));
+        up = glm::cross(right, fwd);
 
         data.pos = cam.position();
         data.right = right;
         data.up = up;
         data.forward = fwd;
-        data.tanHalfFov = tan(radians(60.0f * 0.5f));
+        data.tanHalfFov = std::tan(glm::radians(60.0f * 0.5f));
         data.aspect = float(WIDTH) / float(HEIGHT);
         data.moving = cam.dragging || cam.panning;
 
         glBindBuffer(GL_UNIFORM_BUFFER, cameraUBO);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(UBOData), &data);
     }
-    void uploadObjectsUBO(const vector<ObjectData>& objs) {
+    // Copy up to 16 objects to binding 3 using the historical CPU buffer layout.
+    // Its scalar-array std140 stride must be validated before using it as a reference.
+    void uploadObjectsUBO(const std::vector<ObjectData>& objs) {
         struct UBOData {
             int   numObjects;
             float _pad0, _pad1, _pad2;        // <-- pad out to 16 bytes
-            vec4  posRadius[16];
-            vec4  color[16];
+            glm::vec4  posRadius[16];
+            glm::vec4  color[16];
             float  mass[16]; 
         } data;
 
-        size_t count = std::min(objs.size(), size_t(16));
+        std::size_t count = std::min(objs.size(), std::size_t(16));
         data.numObjects = static_cast<int>(count);
 
-        for (size_t i = 0; i < count; ++i) {
+        for (std::size_t i = 0; i < count; ++i) {
             data.posRadius[i] = objs[i].posRadius;
             data.color[i] = objs[i].color;
             data.mass[i] = objs[i].mass;
@@ -543,6 +567,7 @@ struct Engine {
         glBindBuffer(GL_UNIFORM_BUFFER, objectsUBO);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(data), &data);
     }
+    // Upload the original disk radii and parameters to binding 2 (four floats).
     void uploadDiskUBO() {
         // disk
         float r1 = SagA.r_s * 2.2f;    // inner radius just outside the event horizon
@@ -555,7 +580,8 @@ struct Engine {
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(diskData), diskData);
     }
     
-    vector<GLuint> QuadVAO(){
+    // Allocate screen geometry and an RGBA8 texture; return {VAO, texture} handles.
+    std::vector<GLuint> QuadVAO(){
         float quadVertices[] = {
             // positions   // texCoords
             -1.0f,  1.0f,  0.0f, 1.0f,  // top left
@@ -595,9 +621,10 @@ struct Engine {
                     GL_RGBA,
                     GL_UNSIGNED_BYTE,
                     nullptr);
-        vector<GLuint> VAOtexture = {VAO, texture};
+        std::vector<GLuint> VAOtexture = {VAO, texture};
         return VAOtexture;
     }
+    // Legacy screen-only draw/present helper; main uses the grid/compute path instead.
     void renderScene() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(shaderProgram);
@@ -611,6 +638,7 @@ struct Engine {
     };
 };
 Engine engine;
+// Route GLFW events to the shared Camera through the window user pointer.
 void setupCameraCallbacks(GLFWwindow* window) {
     glfwSetWindowUserPointer(window, &camera);
 
@@ -637,12 +665,14 @@ void setupCameraCallbacks(GLFWwindow* window) {
 
 
 // -- MAIN -- //
+// Run the original scene loop: gravity work, CPU grid, compute rays, quad, presentation.
+// M0 timing is external so neither this loop nor B0 gains timing instrumentation.
 int main() {
     setupCameraCallbacks(engine.window);
-    vector<unsigned char> pixels(engine.WIDTH * engine.HEIGHT * 3);
+    std::vector<unsigned char> pixels(engine.WIDTH * engine.HEIGHT * 3);
 
     auto t0 = Clock::now();
-    lastPrintTime = chrono::duration<double>(t0.time_since_epoch()).count();
+    lastPrintTime = std::chrono::duration<double>(t0.time_since_epoch()).count();
 
     double lastTime = glfwGetTime();
     int   renderW  = 800, renderH = 600, numSteps = 80000;
@@ -661,9 +691,9 @@ int main() {
                  float dx  = obj2.posRadius.x - obj.posRadius.x;
                  float dy = obj2.posRadius.y - obj.posRadius.y;
                  float dz = obj2.posRadius.z - obj.posRadius.z;
-                 float distance = sqrt(dx * dx + dy * dy + dz * dz);
+                 float distance = std::sqrt(dx * dx + dy * dy + dz * dz);
                  if (distance > 0) {
-                        vector<double> direction = {dx / distance, dy / distance, dz / distance};
+                        std::vector<double> direction = {dx / distance, dy / distance, dz / distance};
                         //distance *= 1000;
                         double Gforce = (G * obj.mass * obj2.mass) / (distance * distance);
 
@@ -677,7 +707,7 @@ int main() {
                             obj.posRadius.x += obj.velocity.x;
                             obj.posRadius.y += obj.velocity.y;
                             obj.posRadius.z += obj.velocity.z;
-                            cout << "velocity: " <<obj.velocity.x<<", " <<obj.velocity.y<<", " <<obj.velocity.z<<endl;
+                            std::cout << "velocity: " <<obj.velocity.x<<", " <<obj.velocity.y<<", " <<obj.velocity.z<<std::endl;
                         }
                     }
             }
@@ -689,9 +719,9 @@ int main() {
         // 2) rebuild grid mesh on CPU
         engine.generateGrid(objects);
         // 5) overlay the bent grid
-        mat4 view = lookAt(camera.position(), camera.target, vec3(0,1,0));
-        mat4 proj = perspective(radians(60.0f), float(engine.COMPUTE_WIDTH)/engine.COMPUTE_HEIGHT, 1e9f, 1e14f);
-        mat4 viewProj = proj * view;
+        glm::mat4 view = glm::lookAt(camera.position(), camera.target, glm::vec3(0,1,0));
+        glm::mat4 proj = glm::perspective(glm::radians(60.0f), float(engine.COMPUTE_WIDTH)/engine.COMPUTE_HEIGHT, 1e9f, 1e14f);
+        glm::mat4 viewProj = proj * view;
         engine.drawGrid(viewProj);
 
         // ---------- RUN RAYTRACER ------------- //
