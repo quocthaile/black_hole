@@ -1,0 +1,3 @@
+# Local capture datasets are intentionally opt-in; retain them on disk.
+*
+!.gitignore

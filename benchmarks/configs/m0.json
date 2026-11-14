@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "M0-original-static",
+  "build": {"configuration": "Release", "architecture": "x64", "standard": "C++17"},
+  "implementations": ["BlackHole3D_baseline", "BlackHole3D"],
+  "window": {"width": 800, "height": 600, "mode": "windowed", "resize_allowed": false},
+  "compute": {"width": 200, "height": 150, "local_size": [16, 16], "dispatch_groups": [13, 10]},
+  "camera": {"target": [0, 0, 0], "radius": 6.34194e10, "azimuth": 0, "elevation": "M_PI / 2.0f", "vertical_fov_degrees": 60, "interaction_allowed": false},
+  "scene": {"source": "original objects initializer in src/baseline/black_hole.cpp", "objects": 3, "gravity_enabled": false, "random_seed": null},
+  "numerics": {"method": "Forward Euler (historical GPU function name rk4Step)", "step": 1e7, "max_steps": 60000, "SagA_rs": 1.269e10, "escape_radius": 1e30, "precision": "original GLSL float ray state; isolated double declarations unchanged"},
+  "warmup_seconds": 10,
+  "capture_seconds": 30,
+  "runs_per_implementation": 5,
+  "capture": {"tool": "PresentMon console", "schema_option": "--v1_metrics", "interval_column": "MsBetweenPresents", "process_filter": "PID of each fresh launch", "discard_first_present": true},
+  "presentation": {"application_swap_interval": "not explicitly set in original source", "driver_override": "record per session", "equivalence": "must be reviewed across implementations; otherwise non-comparable"}
+}

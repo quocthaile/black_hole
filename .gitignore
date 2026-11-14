@@ -151,3 +151,7 @@ build/*
 
 ###### Visual Studio
 .vs
+
+# Python benchmark bytecode
+__pycache__/
+*.pyc

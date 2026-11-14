@@ -37,8 +37,35 @@ The source organization and small CMake target helper follow
 [gravity_sim](https://github.com/quocthaile/gravity_sim/tree/c98dcd55958420b88e6c5193e954e71ee3f8b574).
 This project retains its own C++17 requirement and dependencies.
 `CPU-geodesic.cpp` and `ray_tracing.cpp` remain reference sources without build targets.
-Other historical files, including the root executable/archive and `vs_code/` examples,
-are retained; use the CMake workflow below for the new layout.
+The historical `vs_code/` examples remain; use the CMake workflow below for this layout.
+
+## Immutable B0 and M0 measurements
+
+The seven baseline files have been byte-compared with original upstream commit
+`dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317`. Their exact Git blob identities and
+Windows line-ending policy are locked in
+[benchmarks/baseline_manifest.json](benchmarks/baseline_manifest.json).
+Development C++ uses explicit `std::`/`glm::` names and explanatory comments;
+the entire baseline directory and all six external shader files are unchanged.
+
+```powershell
+python benchmarks/scripts/verify_baseline.py
+python -m unittest discover -s benchmarks/scripts -p 'test_*.py' -v
+```
+
+See [the M0 workflow](benchmarks/README.md) for Release x64 builds, five-run
+PresentMon captures, raw CSV retention, frame-time statistics and presentation
+equivalence review. The initial configuration is a static original scene,
+800 x 600 window, 200 x 150 compute, gravity off, 10 s warm-up and 30 s capture.
+No numerical optimization or speedup is claimed; actual FPS capture remains
+unverified until the external tool and presentation conditions are available.
+
+The historical GPU `rk4Step()` is **Forward Euler**, while the archived CPU file
+contains four-stage RK4. Neither is a validated physical reference. Read the
+[architecture](docs/baseline_architecture.md),
+[numerical limitations](docs/baseline_numerical_audit.md), and
+[executed checks and remaining limitations](docs/baseline_m0_verification.md).
+CPU reference creation and shader correction belong to future branches.
 
 ## Build
 

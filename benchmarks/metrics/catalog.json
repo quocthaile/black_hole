@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "metric_set": "M0",
+  "input": "K finite positive MsBetweenPresents intervals Ti in milliseconds from one PID and swap chain",
+  "percentile": "sort ascending; interpolate at index (K-1)*p (Hyndman-Fan type 7)",
+  "metrics": [
+    {"id": "average_fps", "unit": "frames/s", "definition": "1000*K/sum(Ti)"},
+    {"id": "mean_frame_time_ms", "unit": "ms", "definition": "sum(Ti)/K"},
+    {"id": "median_frame_time_ms", "unit": "ms", "definition": "p=0.50"},
+    {"id": "p95_frame_time_ms", "unit": "ms", "definition": "p=0.95"},
+    {"id": "p99_frame_time_ms", "unit": "ms", "definition": "p=0.99"},
+    {"id": "frame_count", "unit": "frames", "definition": "K accepted intervals (K+1 present events)"},
+    {"id": "measurement_duration_s", "unit": "s", "definition": "sum(Ti)/1000"}
+  ]
+}
