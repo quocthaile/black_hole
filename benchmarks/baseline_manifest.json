@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "baseline_id": "B0",
+  "upstream_repository": "https://github.com/kavan010/black_hole",
+  "upstream_commit": "dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317",
+  "fork_repository": "https://github.com/quocthaile/black_hole",
+  "fork_original_snapshot_commit": "dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317",
+  "fork_snapshot_commit": "0f74de4ae0fcb6436f95a7a5cd709aa023c93f67",
+  "line_endings": "CRLF_to_LF_only",
+  "identity_note": "All seven baseline blobs are byte-identical to upstream. Raw Git blob hashes preserve original mixed LF/CRLF evidence; lf_* hashes allow checkout CRLF normalization only. Build wrappers differ from upstream.",
+  "baseline_files": [
+    {
+      "path": "src/baseline/2D_lensing.cpp",
+      "git_blob_sha1": "f2f4e795bb56f8a5d379e34c26906ce1aa54f8db",
+      "blob_sha256": "2eaba452e1fd9c747fcdcf043f06066682f6a9c8bb1b4b58994488af4043c3d7",
+      "blob_bytes": 7060,
+      "lf_git_blob_sha1": "f2f4e795bb56f8a5d379e34c26906ce1aa54f8db",
+      "lf_sha256": "2eaba452e1fd9c747fcdcf043f06066682f6a9c8bb1b4b58994488af4043c3d7",
+      "upstream_path": "2D_lensing.cpp",
+      "upstream_git_blob_sha1": "f2f4e795bb56f8a5d379e34c26906ce1aa54f8db",
+      "upstream_identical": true
+    },
+    {
+      "path": "src/baseline/CPU-geodesic.cpp",
+      "git_blob_sha1": "f94e8ae5805507c1ad7df20dd45d5d5d4fef3232",
+      "blob_sha256": "82d8ba198b26644b0171e8d9515172ef5ab4a23e81cf9d41847716b7d6f811c5",
+      "blob_bytes": 16763,
+      "lf_git_blob_sha1": "f94e8ae5805507c1ad7df20dd45d5d5d4fef3232",
+      "lf_sha256": "82d8ba198b26644b0171e8d9515172ef5ab4a23e81cf9d41847716b7d6f811c5",
+      "upstream_path": "CPU-geodesic.cpp",
+      "upstream_git_blob_sha1": "f94e8ae5805507c1ad7df20dd45d5d5d4fef3232",
+      "upstream_identical": true
+    },
+    {
+      "path": "src/baseline/black_hole.cpp",
+      "git_blob_sha1": "926ac7c0cf6a9eb628ec27f29e000cec289a5c82",
+      "blob_sha256": "d5f39a36322ed110f8674e3eb4168ae1dce5ec8bf98386892b9a6d8ad75e6c52",
+      "blob_bytes": 26536,
+      "lf_git_blob_sha1": "f39d17ba23356466e1e83355abbdf9a162e646bd",
+      "lf_sha256": "d80ac507f74538dff7fd3977017014ec158806dea34abf0aa2761e02d9915d3d",
+      "upstream_path": "black_hole.cpp",
+      "upstream_git_blob_sha1": "926ac7c0cf6a9eb628ec27f29e000cec289a5c82",
+      "upstream_identical": true
+    },
+    {
+      "path": "src/baseline/geodesic.comp",
+      "git_blob_sha1": "9e7d1ad16dc2172f6a27490159b742e38a088bb1",
+      "blob_sha256": "9924ebbcaa42a667a429eee73fd9d438843ace32718af5d0118ba5893e23d4fe",
+      "blob_bytes": 5403,
+      "lf_git_blob_sha1": "9e7d1ad16dc2172f6a27490159b742e38a088bb1",
+      "lf_sha256": "9924ebbcaa42a667a429eee73fd9d438843ace32718af5d0118ba5893e23d4fe",
+      "upstream_path": "geodesic.comp",
+      "upstream_git_blob_sha1": "9e7d1ad16dc2172f6a27490159b742e38a088bb1",
+      "upstream_identical": true
+    },
+    {
+      "path": "src/baseline/grid.frag",
+      "git_blob_sha1": "5b0ad0923ae9097e9e27382df1963a6a5118dbb8",
+      "blob_sha256": "31163fbd4f1ec081ae377bec5693d5eec424f0ccd0d1e0456cc928f7d43b2d09",
+      "blob_bytes": 127,
+      "lf_git_blob_sha1": "30588c6c551bf8f05d89d2fe04c3f55494734225",
+      "lf_sha256": "0d198d3f9b944a279bc2477cbe26a20d31144f8c498135ab86dce7ee846b852f",
+      "upstream_path": "grid.frag",
+      "upstream_git_blob_sha1": "5b0ad0923ae9097e9e27382df1963a6a5118dbb8",
+      "upstream_identical": true
+    },
+    {
+      "path": "src/baseline/grid.vert",
+      "git_blob_sha1": "2f3c81ce47a21a8463978af6da7bce63b6f56bdc",
+      "blob_sha256": "3a68fa3f79fee9e35c10ca761e4af31d720f062a65bbab6c0e0eb932048eb385",
+      "blob_bytes": 144,
+      "lf_git_blob_sha1": "87dc2485bd89f628838987ca23419090b242e899",
+      "lf_sha256": "03d2ca432e5707e37870237e4a4ba602b074582064aaeb729b0657b180d66724",
+      "upstream_path": "grid.vert",
+      "upstream_git_blob_sha1": "2f3c81ce47a21a8463978af6da7bce63b6f56bdc",
+      "upstream_identical": true
+    },
+    {
+      "path": "src/baseline/ray_tracing.cpp",
+      "git_blob_sha1": "4479c30d2ad6a69d6c1bdeb3ac8da76ce73daa5b",
+      "blob_sha256": "a9891e8dff1f1f50f05255e1ea508c56b20952fcb72181c71e03f90da74e925b",
+      "blob_bytes": 9198,
+      "lf_git_blob_sha1": "4479c30d2ad6a69d6c1bdeb3ac8da76ce73daa5b",
+      "lf_sha256": "a9891e8dff1f1f50f05255e1ea508c56b20952fcb72181c71e03f90da74e925b",
+      "upstream_path": "ray_tracing.cpp",
+      "upstream_git_blob_sha1": "4479c30d2ad6a69d6c1bdeb3ac8da76ce73daa5b",
+      "upstream_identical": true
+    }
+  ],
+  "development_shaders": [
+    {
+      "path": "shaders/geodesic.comp",
+      "git_blob_sha1": "9e7d1ad16dc2172f6a27490159b742e38a088bb1",
+      "blob_sha256": "9924ebbcaa42a667a429eee73fd9d438843ace32718af5d0118ba5893e23d4fe",
+      "blob_bytes": 5403,
+      "lf_git_blob_sha1": "9e7d1ad16dc2172f6a27490159b742e38a088bb1",
+      "lf_sha256": "9924ebbcaa42a667a429eee73fd9d438843ace32718af5d0118ba5893e23d4fe"
+    },
+    {
+      "path": "shaders/grid.vert",
+      "git_blob_sha1": "2f3c81ce47a21a8463978af6da7bce63b6f56bdc",
+      "blob_sha256": "3a68fa3f79fee9e35c10ca761e4af31d720f062a65bbab6c0e0eb932048eb385",
+      "blob_bytes": 144,
+      "lf_git_blob_sha1": "87dc2485bd89f628838987ca23419090b242e899",
+      "lf_sha256": "03d2ca432e5707e37870237e4a4ba602b074582064aaeb729b0657b180d66724"
+    },
+    {
+      "path": "shaders/grid.frag",
+      "git_blob_sha1": "5b0ad0923ae9097e9e27382df1963a6a5118dbb8",
+      "blob_sha256": "31163fbd4f1ec081ae377bec5693d5eec424f0ccd0d1e0456cc928f7d43b2d09",
+      "blob_bytes": 127,
+      "lf_git_blob_sha1": "30588c6c551bf8f05d89d2fe04c3f55494734225",
+      "lf_sha256": "0d198d3f9b944a279bc2477cbe26a20d31144f8c498135ab86dce7ee846b852f"
+    }
+  ],
+  "build": {
+    "target": "BlackHole3D_baseline",
+    "standard": "C++17",
+    "generator": "Visual Studio 18 2026",
+    "architecture": "x64",
+    "configuration": "Release",
+    "triplet": "x64-windows",
+    "vcpkg_builtin_baseline": "3855d4d6b52353ee2e2f73044327e59d01a18c84",
+    "dependencies": [
+      "glfw3",
+      "glew",
+      "glm",
+      "OpenGL"
+    ],
+    "msvc_extra_options": [
+      "/utf-8"
+    ],
+    "runtime_directory": "<build>/bin/Release/BlackHole3D_baseline",
+    "working_directory": "executable directory",
+    "context": "OpenGL 4.3 core",
+    "shader_versions": {
+      "geodesic.comp": "430",
+      "grid.vert": "330 core",
+      "grid.frag": "330 core"
+    },
+    "snapshot_files": [
+      {
+        "path": "CMakeLists.txt",
+        "git_blob_sha1": "2d6204a2d4aa1f930f7b810e6ab58bf0c0e0a572",
+        "blob_sha256": "a7405ed022f0344edbe6be1f9c1c867c8b7ea1859985bae976d64409540f3179",
+        "blob_bytes": 3464,
+        "lf_git_blob_sha1": "2d6204a2d4aa1f930f7b810e6ab58bf0c0e0a572",
+        "lf_sha256": "a7405ed022f0344edbe6be1f9c1c867c8b7ea1859985bae976d64409540f3179"
+      },
+      {
+        "path": "CMakePresets.json",
+        "git_blob_sha1": "f4af7a0b405c59cc29aa4d2d3c670aab8932e06b",
+        "blob_sha256": "975474370c24b52711998cc216ac5f7646a12a2bc984b1370b6006b5faaaf69a",
+        "blob_bytes": 952,
+        "lf_git_blob_sha1": "f4af7a0b405c59cc29aa4d2d3c670aab8932e06b",
+        "lf_sha256": "975474370c24b52711998cc216ac5f7646a12a2bc984b1370b6006b5faaaf69a"
+      },
+      {
+        "path": "vcpkg.json",
+        "git_blob_sha1": "9d3e2e96e5781babfaeedd687c97c90e0ae1e2d1",
+        "blob_sha256": "da4b4fdcfb75d785beecebe68e30341534c0d913057c762fc8e11b8652d95a2b",
+        "blob_bytes": 129,
+        "lf_git_blob_sha1": "9d3e2e96e5781babfaeedd687c97c90e0ae1e2d1",
+        "lf_sha256": "da4b4fdcfb75d785beecebe68e30341534c0d913057c762fc8e11b8652d95a2b"
+      }
+    ]
+  }
+}
