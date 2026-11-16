@@ -454,7 +454,7 @@ Phần còn thiếu: <yêu cầu cụ thể; không thêm tính năng ngoài ph�
 
 **Nguồn quy ước:** Quy ước kỹ thuật bổ sung do người dùng xác nhận.
 
-Đây là quy ước kỹ thuật cho các công việc phát triển trong tương lai của `gravity_sim` và `black_hole`, không phải yêu cầu khoa học bổ sung từ đề cương/PDF gốc. Mục tiêu là giữ code phù hợp với sinh viên kỹ thuật bậc đại học: dễ đọc, dễ hiểu, dễ debug và bảo trì, đồng thời vẫn đúng về kỹ thuật đối với phần mềm mô phỏng khoa học.
+Đây là quy ước kỹ thuật cho các công việc phát triển trong tương lai của `gravity_sim` và `black_hole`.
 
 #### 12.4.1. Cách triển khai thân thiện với sinh viên
 
