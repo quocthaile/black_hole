@@ -450,6 +450,109 @@ Kiểm tra: <lệnh/cấu hình/reference đã chạy; kết quả thực tế>
 Phần còn thiếu: <yêu cầu cụ thể; không thêm tính năng ngoài phạm vi>
 ```
 
+### 12.4. Coding Style and Readability
+
+**Nguồn quy ước:** Quy ước kỹ thuật bổ sung do người dùng xác nhận.
+
+Đây là quy ước kỹ thuật cho các công việc phát triển trong tương lai của `gravity_sim` và `black_hole`, không phải yêu cầu khoa học bổ sung từ đề cương/PDF gốc. Mục tiêu là giữ code phù hợp với sinh viên kỹ thuật bậc đại học: dễ đọc, dễ hiểu, dễ debug và bảo trì, đồng thời vẫn đúng về kỹ thuật đối với phần mềm mô phỏng khoa học.
+
+#### 12.4.1. Cách triển khai thân thiện với sinh viên
+
+- Ưu tiên control flow đơn giản; vòng lặp `for`/`while` và điều kiện `if/else` tường minh; tên biến, hàm mô tả đúng vai trò; hàm nhỏ có trách nhiệm rõ ràng; tính năng chuẩn C++17; data flow tường minh; và data structure đơn giản khi phù hợp.
+- Tránh template metaprogramming, cấu trúc kế thừa phức tạp, abstraction hoặc generic framework quá mức, macro không cần thiết, biểu thức một dòng dày đặc, lambda quá phức tạp, logic lồng nhau khó theo dõi và dependency ngoài không cần thiết.
+- Không rút gọn hoặc thay đổi thuật toán toán học chỉ để code ngắn hơn. Khi logic phức tạp là cần thiết cho numerical correctness, GPU execution hoặc performance, phải giữ implementation đúng và dùng comment để giải thích các bước xử lý quan trọng.
+- Giữ nguyên terminology, API và kiến trúc hiện hữu. Trước khi sửa phải khảo sát code liên quan; chỉ thay đổi phần phục vụ trực tiếp công việc; ưu tiên thay đổi tăng dần và không tạo class hierarchy hoặc abstraction layer mới chỉ để áp đặt coding style.
+- Với thay đổi chỉ về readability, không được làm đổi algorithmic behavior. Khi thay đổi style có thể ảnh hưởng numerical behavior, memory layout, CPU/GPU data flow hoặc synchronization, phải giải thích ảnh hưởng và thực hiện validation phù hợp; khi thực tế cho phép, tách readability change khỏi numerical/performance change.
+
+#### 12.4.2. Quy tắc namespace cho `black_hole`
+
+Code C++ phát triển mới hoặc được sửa trong `black_hole` không được import toàn bộ namespace ở global scope. Các khai báo sau bị cấm:
+
+```cpp
+using namespace std;
+using namespace glm;
+using namespace reference;
+```
+
+Phải ghi qualification tại từng nơi sử dụng, ví dụ:
+
+```cpp
+std::cout
+std::cerr
+std::vector
+std::string
+std::array
+std::sqrt
+std::sin
+
+glm::vec2
+glm::vec3
+glm::vec4
+glm::mat4
+glm::normalize
+glm::cross
+glm::dot
+
+reference::State
+reference::rk4Step()
+```
+
+Không thay quy tắc này bằng các declaration riêng lẻ như `using std::cout;` hoặc `using glm::vec3;`; namespace phải hiển thị tại mỗi usage site. Namespace definition vẫn được phép:
+
+```cpp
+namespace reference {
+
+// Numerical reference implementation.
+
+}
+```
+
+Type alias có mục đích làm code dễ đọc vẫn được phép, ví dụ `using Clock = std::chrono::high_resolution_clock;`; type alias không phải global namespace import. Với namespace do dự án định nghĩa, phải dùng qualification tường minh khi truy cập member từ bên ngoài namespace đó.
+
+#### 12.4.3. Tính nhất quán trong `gravity_sim`
+
+Trong `gravity_sim`, tuân theo coding style và naming convention đã có của repository. Không thực hiện namespace refactor không liên quan chỉ để hai dự án giống nhau về mặt văn bản. Nguyên tắc chung cho cả hai dự án là C++ rõ ràng, tường minh và dễ đọc.
+
+#### 12.4.4. Comment và tài liệu trong source code
+
+- Comment phải giải thích trách nhiệm của function và chi tiết implementation không hiển nhiên, thay vì dịch từng statement sang ngôn ngữ tự nhiên.
+- Với function mới hoặc được thay đổi đáng kể, khi phù hợp cần mô tả purpose; ý nghĩa input/output; assumption quan trọng; physical unit và coordinate convention; numerical algorithm và processing stage; GPU resource operation; synchronization requirement; error handling và termination condition.
+- Không thêm comment quá mức làm code khó đọc. Giữ terminology kỹ thuật và API name đã thiết lập.
+- Dùng comment tiếng Anh nhất quán trong source code, trừ khi repository đã thiết lập convention khác. Tài liệu dành cho người dùng có thể viết bằng tiếng Việt. Không dịch hoặc đổi tên technology, API, class, function, variable hay algorithm terminology đã có nếu không có lý do rõ ràng.
+
+Ví dụ:
+
+```cpp
+// Generate grid vertices from the current object positions.
+// The generated vertices are uploaded to the GPU for rendering.
+void generateGrid(const std::vector<ObjectData>& objects);
+```
+
+#### 12.4.5. Python script
+
+Python script mới được tạo khi công việc yêu cầu trong một trong hai dự án phải có:
+
+1. Module-level docstring mô tả mục đích.
+2. Mô tả các input file bắt buộc.
+3. Mô tả các output file được tạo.
+4. Mô tả command-line argument khi có.
+5. Một lệnh ví dụ để chạy script.
+6. Comment cho logic không hiển nhiên.
+7. Input validation và error handling phù hợp.
+
+Ưu tiên Python standard library cho tác vụ đơn giản như xử lý CSV, thống kê benchmark, kiểm tra file, chuyển đổi dữ liệu và utility validation nhỏ. Tránh dependency hoặc script framework không cần thiết. Tài liệu phải giải thích script tham gia vào workflow của dự án như thế nào.
+
+#### 12.4.6. Bảo toàn baseline và giới hạn áp dụng
+
+Quy ước này không cho phép viết lại historical baseline source. Đối với `black_hole`:
+
+- Không sửa `src/baseline/`, không xóa legacy `using namespace` trong immutable baseline file, không reformat baseline source và không thay comment, numerical constant hoặc algorithm trong các file đó.
+- Chỉ áp dụng quy ước cho development code mới hoặc được sửa, numerical reference code mới trong công việc tương lai, benchmark/validation script mới và tài liệu mới.
+
+Nguyên tắc tương tự áp dụng cho immutable baseline/reference file của `gravity_sim`. Nếu công việc tương lai yêu cầu rõ ràng phải sửa historical baseline source, phải có justification riêng và giữ nguyên original comparison snapshot.
+
+Quy ước coding style không được dùng làm lý do cho broad refactoring hoặc thay đổi ngoài phạm vi. Nó thiết lập yêu cầu cho phát triển trong tương lai; không xác nhận rằng source code hiện tại của hai repository đã được reformat hoặc đã tuân thủ toàn bộ các quy ước này.
+
 ## 13. Tài liệu tham khảo được ghi trong đề cương
 
 Danh mục sau được chép lại từ trang 3 để agent nhận diện nguồn mà đề cương đã dẫn; đây không phải kết quả xác minh độc lập thư mục, nội dung bài báo hoặc trạng thái indexing. Chỉ các yêu cầu ở phần nội dung/kế hoạch mới quyết định phạm vi implementation.
