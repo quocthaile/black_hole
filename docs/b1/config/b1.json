@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_id": "B1",
+  "metric": "Schwarzschild",
+  "metric_signature": "(-,+,+,+)",
+  "coordinate_length_unit": "Schwarzschild radius r_s",
+  "energy_normalization": 1.0,
+  "camera_observer": "static orthonormal frame outside r_s",
+  "ray_direction": "camera into scene with increasing affine parameter",
+  "compute_resolution": [200, 150],
+  "workgroup_size": [16, 16],
+  "fixed_step_affine": 0.01,
+  "maximum_steps": 60000,
+  "escape_radius": 100.0,
+  "disk_inner_radius": 2.2,
+  "disk_outer_radius": 5.2,
+  "disk_plane_normal": [0.0, 1.0, 0.0],
+  "event_rule": "earliest segment intersection among horizon, disk, object, escape",
+  "numeric_precision": "GLSL float on GPU; C++ double in R0",
+  "shader": "shaders/b1/geodesic.comp",
+  "source": "src/b1/black_hole.cpp",
+  "r0_validation_target": "BlackHoleB1GpuValidation"
+}

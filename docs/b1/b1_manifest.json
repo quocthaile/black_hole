@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "baseline_id": "B1",
+  "source_snapshot_commit": "2a63277f60c05800e5e1861f8bd7e7d1b7ebd29a",
+  "development_branch": "research/blackhole-b1",
+  "target": "BlackHole3D_B1",
+  "runtime_asset_directory": "shaders/b1",
+  "hash_algorithm": "SHA-256",
+  "source_files": [
+    {
+      "path": "src/b1/black_hole.cpp",
+      "sha256": "9ba50b61deb1eb7dff9c16bee1c88acca830a2b9425ae3e8d0b41246aeef0e7a"
+    },
+    {
+      "path": "shaders/b1/geodesic.comp",
+      "sha256": "0ff9f08bb122785e10e0ce440fd44c0e179392ac096d90426ceb448d5ca43a39"
+    },
+    {
+      "path": "shaders/b1/grid.vert",
+      "sha256": "3a68fa3f79fee9e35c10ca761e4af31d720f062a65bbab6c0e0eb932048eb385"
+    },
+    {
+      "path": "shaders/b1/grid.frag",
+      "sha256": "31163fbd4f1ec081ae377bec5693d5eec424f0ccd0d1e0456cc928f7d43b2d09"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "ddf18ca624dd93fb9126d80db47ecd5586c935e0552f534315c460241903aa51"
+    },
+    {
+      "path": "docs/b1/config/b1.json",
+      "sha256": "10d4cec21d0b01c13560c81a01449b33752239192eed46e3a1d053d8536e28c4"
+    }
+  ],
+  "r0_test_target": "BlackHoleGeodesicReferenceTests",
+  "gpu_validation_target": "BlackHoleB1GpuValidation",
+  "b0_manifest": "benchmarks/baseline_manifest.json"
+}
