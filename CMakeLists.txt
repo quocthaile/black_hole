@@ -117,6 +117,11 @@ add_black_hole_executable(
     src/black_hole.cpp
 )
 
+add_black_hole_executable(
+    BlackHole3D_B1
+    src/b1/black_hole.cpp
+)
+
 # Baseline versions
 
 add_black_hole_executable(
@@ -129,6 +134,35 @@ add_black_hole_executable(
     src/baseline/2D_lensing.cpp
 )
 
+# Independent CPU double-precision solver and its analytical/convergence checks.
+add_executable(
+    BlackHoleGeodesicReference
+    src/reference/reference_main.cpp
+    src/reference/geodesic_reference.cpp
+)
+
+add_executable(
+    BlackHoleGeodesicReferenceTests
+    src/reference/reference_tests.cpp
+    src/reference/geodesic_reference.cpp
+)
+
+add_executable(
+    BlackHoleB1GpuValidation
+    src/reference/gpu_validation.cpp
+    src/reference/geodesic_reference.cpp
+)
+target_link_libraries(BlackHoleB1GpuValidation
+    PRIVATE glfw GLEW::GLEW glm::glm OpenGL::GL
+)
+
+enable_testing()
+add_test(NAME BlackHoleGeodesicReferenceTests COMMAND BlackHoleGeodesicReferenceTests)
+add_test(NAME BlackHoleB1GpuValidation COMMAND BlackHoleB1GpuValidation)
+set_tests_properties(BlackHoleB1GpuValidation PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 # ============================================================
 # Shader Staging
 # ============================================================
@@ -137,7 +171,12 @@ add_black_hole_executable(
 
 add_black_hole_shaders(
     BlackHole3D
-    shaders
+    shaders/b1
+)
+
+add_black_hole_shaders(
+    BlackHole3D_B1
+    shaders/b1
 )
 
 # Baseline 3D

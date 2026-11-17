@@ -1,0 +1,309 @@
+#version 430 core
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(binding = 0, rgba8) writeonly uniform image2D outImage;
+
+layout(std140, binding = 1) uniform Camera {
+    vec4 camPos;
+    vec4 camRight;
+    vec4 camUp;
+    vec4 camForward;
+    vec4 camSettings; // tanHalfFov, aspect, width, height
+} cameraData;
+
+layout(std140, binding = 2) uniform Disk {
+    vec4 diskParameters; // inner radius, outer radius, reserved, reserved
+    vec4 diskNormal;
+};
+
+layout(std140, binding = 3) uniform Objects {
+    ivec4 objectCounts;
+    vec4 objectPositionRadius[16];
+    vec4 objectColor[16];
+};
+
+const float SCHWARZSCHILD_RADIUS = 1.0;
+const float FIXED_STEP = 0.01;
+#ifndef B1_MAXIMUM_STEPS
+#define B1_MAXIMUM_STEPS 60000
+#endif
+const int MAXIMUM_STEPS = B1_MAXIMUM_STEPS;
+const float ESCAPE_RADIUS = 100.0;
+const float DOMAIN_EPSILON = 1.0e-6;
+
+struct State {
+    float radius;
+    float angle;
+    float radialVelocity;
+};
+
+struct Ray {
+    State state;
+    vec3 initialRadial;
+    vec3 initialTangent;
+    float angularMomentum;
+    float energy;
+};
+
+struct Event {
+    bool found;
+    float fraction;
+    int kind; // 1 horizon, 2 disk, 3 object, 4 escape
+    int objectIndex;
+};
+
+#ifdef B1_DIAGNOSTICS
+layout(std430, binding = 4) buffer DiagnosticOutput {
+    vec4 diagnosticSamples[]; // r, orbital-plane angle, dr/dsigma, affine parameter
+};
+#endif
+
+// Return whether every state component is a finite float, without imposing a domain.
+bool isFiniteState(State state) {
+    return !isnan(state.radius) && !isinf(state.radius) &&
+           !isnan(state.angle) && !isinf(state.angle) &&
+           !isnan(state.radialVelocity) && !isinf(state.radialVelocity);
+}
+
+// Return whether a ray state is finite and lies inside the supported positive-radius domain.
+bool isValidState(State state) {
+    return isFiniteState(state) && state.radius > DOMAIN_EPSILON;
+}
+
+// Initialize a null ray from the camera's static orthonormal frame and normalize Killing E to one.
+// Camera position and all scene lengths are measured in units of the Schwarzschild radius.
+Ray initRay(vec3 cameraPosition, vec3 cameraDirection) {
+    Ray ray;
+    float cameraRadius = length(cameraPosition);
+    ray.initialRadial = cameraPosition / cameraRadius;
+    float radialDirection = dot(cameraDirection, ray.initialRadial);
+    vec3 transverseDirection = cameraDirection - radialDirection * ray.initialRadial;
+    float lapse = 1.0 - SCHWARZSCHILD_RADIUS / cameraRadius;
+    float transverseLength = length(transverseDirection);
+
+    ray.initialTangent = transverseLength > DOMAIN_EPSILON
+        ? transverseDirection / transverseLength
+        : normalize(cross(ray.initialRadial, abs(ray.initialRadial.y) < 0.9
+                          ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+    ray.angularMomentum = cameraRadius * transverseLength / sqrt(lapse);
+    ray.energy = 1.0;
+    ray.state.radius = cameraRadius;
+    ray.state.angle = 0.0;
+    ray.state.radialVelocity = radialDirection;
+    return ray;
+}
+
+// Compute the null-constrained planar Schwarzschild RHS from the radial first integral.
+// Inputs use r/r_s and the affine scale with conserved Killing energy E=1.
+bool geodesicRHS(State state, float angularMomentum, out State derivative) {
+    if (!isValidState(state)) {
+        return false;
+    }
+    float radiusSquared = state.radius * state.radius;
+    derivative.radius = state.radialVelocity;
+    derivative.angle = angularMomentum / radiusSquared;
+    derivative.radialVelocity = angularMomentum * angularMomentum /
+        (radiusSquared * state.radius) *
+        (1.0 - 1.5 * SCHWARZSCHILD_RADIUS / state.radius);
+    return isFiniteState(derivative);
+}
+
+// Form an intermediate state for one classical RK4 stage.
+State addScaled(State state, State derivative, float scale) {
+    State result;
+    result.radius = state.radius + scale * derivative.radius;
+    result.angle = state.angle + scale * derivative.angle;
+    result.radialVelocity = state.radialVelocity + scale * derivative.radialVelocity;
+    return result;
+}
+
+// Advance the ray by one fixed classical RK4 step with exactly four RHS evaluations.
+// False means a non-finite or singular intermediate state; callers classify it as invalid.
+bool rk4Step(inout State state, float angularMomentum, float stepSize) {
+    State k1;
+    State k2;
+    State k3;
+    State k4;
+    if (!geodesicRHS(state, angularMomentum, k1)) return false;
+    if (!geodesicRHS(addScaled(state, k1, 0.5 * stepSize), angularMomentum, k2)) return false;
+    if (!geodesicRHS(addScaled(state, k2, 0.5 * stepSize), angularMomentum, k3)) return false;
+    if (!geodesicRHS(addScaled(state, k3, stepSize), angularMomentum, k4)) return false;
+
+    state.radius += stepSize / 6.0 *
+        (k1.radius + 2.0 * k2.radius + 2.0 * k3.radius + k4.radius);
+    state.angle += stepSize / 6.0 *
+        (k1.angle + 2.0 * k2.angle + 2.0 * k3.angle + k4.angle);
+    state.radialVelocity += stepSize / 6.0 *
+        (k1.radialVelocity + 2.0 * k2.radialVelocity +
+         2.0 * k3.radialVelocity + k4.radialVelocity);
+    return isValidState(state);
+}
+
+// Reconstruct the ray's dimensionless Cartesian position from its fixed orbital plane.
+vec3 positionAt(Ray ray, State state) {
+    return state.radius * (cos(state.angle) * ray.initialRadial +
+                           sin(state.angle) * ray.initialTangent);
+}
+
+#ifdef B1_DIAGNOSTICS
+// Store one diagnostic sample for the single-ray GPU validation dispatch.
+void writeDiagnosticSample(int sampleIndex, Ray ray, float affineParameter) {
+    diagnosticSamples[sampleIndex] = vec4(ray.state.radius, ray.state.angle,
+                                          ray.state.radialVelocity, affineParameter);
+}
+#endif
+
+// Find the first line-segment intersection with a sphere and return its fraction in [0,1].
+bool segmentSphere(vec3 start, vec3 end, vec3 center, float radius, out float fraction) {
+    vec3 delta = end - start;
+    vec3 offset = start - center;
+    float a = dot(delta, delta);
+    float b = 2.0 * dot(offset, delta);
+    float c = dot(offset, offset) - radius * radius;
+    if (a <= 0.0) return false;
+    float discriminant = b * b - 4.0 * a * c;
+    if (discriminant < 0.0 || isnan(discriminant) || isinf(discriminant)) return false;
+    float root = sqrt(discriminant);
+    float first = (-b - root) / (2.0 * a);
+    float second = (-b + root) / (2.0 * a);
+    if (first >= 0.0 && first <= 1.0) {
+        fraction = first;
+        return true;
+    }
+    if (second >= 0.0 && second <= 1.0) {
+        fraction = second;
+        return true;
+    }
+    return false;
+}
+
+// Keep the event with the earliest segment fraction; earlier insertion wins exact ties.
+void keepEarlierEvent(inout Event selected, float fraction, int kind, int objectIndex) {
+    if (fraction < 0.0 || fraction > 1.0 || isnan(fraction) || isinf(fraction)) return;
+    if (!selected.found || fraction < selected.fraction) {
+        selected.found = true;
+        selected.fraction = fraction;
+        selected.kind = kind;
+        selected.objectIndex = objectIndex;
+    }
+}
+
+// Locate horizon, disk, object, and outward escape events and select the earliest one.
+Event detectFirstEvent(vec3 start, vec3 end) {
+    Event selected = Event(false, 1.0, 0, -1);
+    float fraction = 0.0;
+    if (segmentSphere(start, end, vec3(0.0), SCHWARZSCHILD_RADIUS, fraction)) {
+        keepEarlierEvent(selected, fraction, 1, -1);
+    }
+
+    float startPlane = dot(start, diskNormal.xyz);
+    float endPlane = dot(end, diskNormal.xyz);
+    if (startPlane * endPlane <= 0.0 && startPlane != endPlane) {
+        float diskFraction = startPlane / (startPlane - endPlane);
+        vec3 diskPoint = mix(start, end, diskFraction);
+        vec3 inPlanePoint = diskPoint - dot(diskPoint, diskNormal.xyz) * diskNormal.xyz;
+        float diskRadius = length(inPlanePoint);
+        if (diskRadius >= diskParameters.x && diskRadius <= diskParameters.y) {
+            keepEarlierEvent(selected, diskFraction, 2, -1);
+        }
+    }
+
+    for (int index = 0; index < objectCounts.x; ++index) {
+        float objectRadius = objectPositionRadius[index].w;
+        if (distance(start, objectPositionRadius[index].xyz) <= objectRadius) {
+            keepEarlierEvent(selected, 0.0, 3, index);
+        } else if (segmentSphere(start, end, objectPositionRadius[index].xyz,
+                                 objectRadius, fraction)) {
+            keepEarlierEvent(selected, fraction, 3, index);
+        }
+    }
+
+    if (segmentSphere(start, end, vec3(0.0), ESCAPE_RADIUS, fraction) &&
+        length(end) > length(start)) {
+        keepEarlierEvent(selected, fraction, 4, -1);
+    }
+    return selected;
+}
+
+// Interpolate a state to the selected first-event fraction for stable event coloring.
+State interpolateState(State start, State end, float fraction) {
+    return State(mix(start.radius, end.radius, fraction),
+                 mix(start.angle, end.angle, fraction),
+                 mix(start.radialVelocity, end.radialVelocity, fraction));
+}
+
+// Integrate one fixed-resolution camera ray and return its event class and output color.
+void traceRay(ivec2 pixel, out vec4 outputColor) {
+    float width = cameraData.camSettings.z;
+    float height = cameraData.camSettings.w;
+    float u = (2.0 * (float(pixel.x) + 0.5) / width - 1.0) *
+              cameraData.camSettings.y * cameraData.camSettings.x;
+    float v = (1.0 - 2.0 * (float(pixel.y) + 0.5) / height) * cameraData.camSettings.x;
+    vec3 direction = normalize(u * cameraData.camRight.xyz +
+                               v * cameraData.camUp.xyz + cameraData.camForward.xyz);
+    Ray ray = initRay(cameraData.camPos.xyz, direction);
+    float affineParameter = 0.0;
+    outputColor = vec4(0.0);
+    if (!isValidState(ray.state) || length(ray.initialRadial) < 0.5) {
+        outputColor = vec4(1.0, 0.0, 1.0, 1.0);
+        return;
+    }
+#ifdef B1_DIAGNOSTICS
+    writeDiagnosticSample(0, ray, affineParameter);
+#endif
+
+    for (int stepIndex = 0; stepIndex < MAXIMUM_STEPS; ++stepIndex) {
+        State previousState = ray.state;
+        vec3 previousPosition = positionAt(ray, previousState);
+        if (!rk4Step(ray.state, ray.angularMomentum, FIXED_STEP)) {
+            outputColor = vec4(1.0, 0.0, 1.0, 1.0); // Invalid numerical state.
+#ifdef B1_DIAGNOSTICS
+            diagnosticSamples[MAXIMUM_STEPS] = vec4(5.0, float(stepIndex), affineParameter, 0.0);
+#endif
+            return;
+        }
+        vec3 nextPosition = positionAt(ray, ray.state);
+        Event event = detectFirstEvent(previousPosition, nextPosition);
+        if (event.found) {
+            ray.state = interpolateState(previousState, ray.state, event.fraction);
+            affineParameter += FIXED_STEP * event.fraction;
+#ifdef B1_DIAGNOSTICS
+            writeDiagnosticSample(stepIndex + 1, ray, affineParameter);
+            diagnosticSamples[MAXIMUM_STEPS] = vec4(float(event.kind),
+                float(stepIndex + 1), affineParameter, event.fraction);
+#endif
+            if (event.kind == 1) {
+                outputColor = vec4(0.0, 0.0, 0.0, 1.0);
+            } else if (event.kind == 2) {
+                float ratio = clamp(ray.state.radius / diskParameters.y, 0.0, 1.0);
+                outputColor = vec4(1.0, ratio, 0.2, ratio);
+            } else if (event.kind == 3) {
+                vec3 center = objectPositionRadius[event.objectIndex].xyz;
+                vec3 normal = normalize(positionAt(ray, ray.state) - center);
+                float diffuse = max(dot(normal, normalize(cameraData.camPos.xyz - positionAt(ray, ray.state))), 0.0);
+                float intensity = 0.1 + 0.9 * diffuse;
+                outputColor = vec4(objectColor[event.objectIndex].rgb * intensity,
+                                   objectColor[event.objectIndex].a);
+            }
+            return;
+        }
+        affineParameter += FIXED_STEP;
+#ifdef B1_DIAGNOSTICS
+        writeDiagnosticSample(stepIndex + 1, ray, affineParameter);
+#endif
+    }
+#ifdef B1_DIAGNOSTICS
+    diagnosticSamples[MAXIMUM_STEPS] = vec4(0.0, float(MAXIMUM_STEPS), affineParameter, 0.0);
+#endif
+    outputColor = vec4(1.0, 0.5, 0.0, 1.0); // Maximum steps reached without a classified event.
+}
+
+// Dispatch one ray per fixed compute pixel and write its RGBA8 result.
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 resolution = ivec2(cameraData.camSettings.zw);
+    if (pixel.x >= resolution.x || pixel.y >= resolution.y) return;
+    vec4 color;
+    traceRay(pixel, color);
+    imageStore(outImage, pixel, color);
+}

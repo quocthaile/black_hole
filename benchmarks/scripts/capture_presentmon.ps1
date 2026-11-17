@@ -104,7 +104,7 @@ try {
 
     $runtime = Join-Path $buildPath "bin/Release/$Implementation"
     $exePath = Join-Path $runtime "$Implementation.exe"
-    $shaderRoot = if ($Implementation -eq 'BlackHole3D_baseline') { 'src/baseline' } else { 'shaders' }
+    $shaderRoot = if ($Implementation -eq 'BlackHole3D_baseline') { 'src/baseline' } else { 'shaders/b1' }
     $shaderIdentities = @()
     foreach ($shader in @('geodesic.comp', 'grid.vert', 'grid.frag')) {
         $deployed = Get-FileIdentity (Join-Path $runtime $shader)

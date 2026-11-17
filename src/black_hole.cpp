@@ -178,6 +178,35 @@ std::vector<ObjectData> objects = {
     {glm::vec4(0.0f, 0.0f, 0.0f, SagA.r_s), glm::vec4(0, 0, 0, 1), static_cast<float>(SagA.mass)},
 };
 
+// Match the vec4-only std140 camera block byte-for-byte.
+struct alignas(16) CameraUBOData
+{
+    glm::vec4 camPos;
+    glm::vec4 camRight;
+    glm::vec4 camUp;
+    glm::vec4 camForward;
+    glm::vec4 camSettings;
+};
+
+// Match the two vec4 std140 disk block entries.
+struct alignas(16) DiskUBOData
+{
+    glm::vec4 parameters;
+    glm::vec4 normal;
+};
+
+// Match the std140 object block's ivec4 and vec4 arrays.
+struct alignas(16) ObjectsUBOData
+{
+    glm::ivec4 counts;
+    glm::vec4 positionRadius[16];
+    glm::vec4 color[16];
+};
+
+static_assert(sizeof(CameraUBOData) == 80, "Camera UBO must contain five std140 vec4 values");
+static_assert(sizeof(DiskUBOData) == 32, "Disk UBO must contain two std140 vec4 values");
+static_assert(sizeof(ObjectsUBOData) == 528, "Objects UBO must match std140 array strides");
+
 struct Engine
 {
     GLuint gridShaderProgram;
@@ -240,23 +269,17 @@ struct Engine
         computeProgram = CreateComputeProgram("geodesic.comp");
         glGenBuffers(1, &cameraUBO);
         glBindBuffer(GL_UNIFORM_BUFFER, cameraUBO);
-        glBufferData(GL_UNIFORM_BUFFER, 128, nullptr, GL_DYNAMIC_DRAW); // alloc ~128 bytes
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUBOData), nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, 1, cameraUBO); // binding = 1 matches shader
         // Disk UBO
         glGenBuffers(1, &diskUBO);
         glBindBuffer(GL_UNIFORM_BUFFER, diskUBO);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(float) * 4, nullptr,
-                     GL_DYNAMIC_DRAW);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(DiskUBOData), nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, 2, diskUBO); // binding = 2 matches compute shader
         // Objects UBO
         glGenBuffers(1, &objectsUBO);
         glBindBuffer(GL_UNIFORM_BUFFER, objectsUBO);
-        // allocate space for 16 objects:
-        // sizeof(int) + padding + 16×(vec4 posRadius + vec4 color)
-        GLsizeiptr objUBOSize = sizeof(int) + 3 * sizeof(float) +
-                                16 * (sizeof(glm::vec4) + sizeof(glm::vec4)) +
-                                16 * sizeof(float); // 16 floats for mass
-        glBufferData(GL_UNIFORM_BUFFER, objUBOSize, nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(ObjectsUBOData), nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, 3, objectsUBO); // binding = 3 matches shader
 
         auto result = QuadVAO();
@@ -534,14 +557,11 @@ struct Engine
         glDeleteShader(cs);
         return prog;
     }
-    // Upload scene inputs, allocate the image and dispatch the original 200 x 150 rays.
-    // Preserve the original image-access barrier; texture-fetch visibility needs a
-    // separate future synchronization audit, not an algorithm change in M0.
+    // Upload fixed B1 scene inputs, dispatch 200 x 150 rays, and expose image writes to texture sampling.
     void dispatchCompute(const Camera &cam)
     {
-        // determine target compute‐res
-        int cw = cam.moving ? COMPUTE_WIDTH : 200;
-        int ch = cam.moving ? COMPUTE_HEIGHT : 150;
+        const int cw = COMPUTE_WIDTH;
+        const int ch = COMPUTE_HEIGHT;
 
         // 1) reallocate the texture if needed
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -567,81 +587,60 @@ struct Engine
         glDispatchCompute(groupsX, groupsY, 1);
 
         // 5) sync
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
     }
-    // Pack the camera basis/FOV for binding 1. Original padding and bool layout remain.
+    // Pack the camera basis in Schwarzschild-radius units for the matching std140 block.
     void uploadCameraUBO(const Camera &cam)
     {
-        struct UBOData
-        {
-            glm::vec3 pos;
-            float _pad0;
-            glm::vec3 right;
-            float _pad1;
-            glm::vec3 up;
-            float _pad2;
-            glm::vec3 forward;
-            float _pad3;
-            float tanHalfFov;
-            float aspect;
-            bool moving;
-            int _pad4;
-        } data;
+        CameraUBOData data{};
         glm::vec3 fwd = glm::normalize(cam.target - cam.position());
         glm::vec3 up = glm::vec3(0, 1, 0); // y axis is up, so disk is in x-z plane
         glm::vec3 right = glm::normalize(glm::cross(fwd, up));
         up = glm::cross(right, fwd);
 
-        data.pos = cam.position();
-        data.right = right;
-        data.up = up;
-        data.forward = fwd;
-        data.tanHalfFov = std::tan(glm::radians(60.0f * 0.5f));
-        data.aspect = float(WIDTH) / float(HEIGHT);
-        data.moving = cam.dragging || cam.panning;
+        const float lengthScale = static_cast<float>(SagA.r_s);
+        data.camPos = glm::vec4(cam.position() / lengthScale, 1.0f);
+        data.camRight = glm::vec4(right, 0.0f);
+        data.camUp = glm::vec4(up, 0.0f);
+        data.camForward = glm::vec4(fwd, 0.0f);
+        data.camSettings = glm::vec4(std::tan(glm::radians(60.0f * 0.5f)),
+                                     float(WIDTH) / float(HEIGHT),
+                                     float(COMPUTE_WIDTH), float(COMPUTE_HEIGHT));
 
         glBindBuffer(GL_UNIFORM_BUFFER, cameraUBO);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(UBOData), &data);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(data), &data);
     }
-    // Copy up to 16 objects to binding 3 using the historical CPU buffer layout.
-    // Its scalar-array std140 stride must be validated before using it as a reference.
+    // Convert scene spheres to Schwarzschild-radius units and upload std140 vec4 arrays.
     void uploadObjectsUBO(const std::vector<ObjectData> &objs)
     {
-        struct UBOData
-        {
-            int numObjects;
-            float _pad0, _pad1, _pad2; // <-- pad out to 16 bytes
-            glm::vec4 posRadius[16];
-            glm::vec4 color[16];
-            float mass[16];
-        } data;
+        ObjectsUBOData data{};
 
         std::size_t count = std::min(objs.size(), std::size_t(16));
-        data.numObjects = static_cast<int>(count);
+        data.counts.x = static_cast<int>(count);
+        const float lengthScale = static_cast<float>(SagA.r_s);
 
         for (std::size_t i = 0; i < count; ++i)
         {
-            data.posRadius[i] = objs[i].posRadius;
+            data.positionRadius[i] = glm::vec4(objs[i].posRadius.x / lengthScale,
+                                               objs[i].posRadius.y / lengthScale,
+                                               objs[i].posRadius.z / lengthScale,
+                                               objs[i].posRadius.w / lengthScale);
             data.color[i] = objs[i].color;
-            data.mass[i] = objs[i].mass;
         }
 
         // Upload
         glBindBuffer(GL_UNIFORM_BUFFER, objectsUBO);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(data), &data);
     }
-    // Upload the original disk radii and parameters to binding 2 (four floats).
+    // Upload the disk annulus and equatorial-plane normal in dimensionless units.
     void uploadDiskUBO()
     {
-        // disk
-        float r1 = SagA.r_s * 2.2f; // inner radius just outside the event horizon
-        float r2 = SagA.r_s * 5.2f; // outer radius of the disk
-        float num = 2.0;            // number of rays
-        float thickness = 1e9f;     // padding for std140 alignment
-        float diskData[4] = {r1, r2, num, thickness};
+        DiskUBOData data{};
+        data.parameters = glm::vec4(2.2f, 5.2f, 0.0f, 0.0f);
+        data.normal = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 
         glBindBuffer(GL_UNIFORM_BUFFER, diskUBO);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(diskData), diskData);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(data), &data);
     }
 
     // Allocate screen geometry and an RGBA8 texture; return {VAO, texture} handles.

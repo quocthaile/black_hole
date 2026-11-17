@@ -20,23 +20,32 @@ src/
     geodesic.comp
     grid.vert
     grid.frag
+  b1/
+    black_hole.cpp
 shaders/
+  b1/
+    geodesic.comp
+    grid.vert
+    grid.frag
   geodesic.comp
   grid.vert
   grid.frag
 ```
 
-The baseline is preserved from [quocthaile/black_hole](https://github.com/quocthaile/black_hole)
+The B0 baseline is preserved from [quocthaile/black_hole](https://github.com/quocthaile/black_hole)
 at commit [`dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317`](https://github.com/quocthaile/black_hole/tree/dc263bb5a1b72f5a24190d2e38b84b5c8fe9a317),
 the `main` revision used for this restructuring. All seven baseline files retain
 the original contents. Development sources and shaders start as independent copies.
 Keep `src/baseline/` unchanged so future computational-cost benchmarks and numerical
 accuracy comparisons have a stable reference. No benchmark instrumentation is added.
 
-The source organization and small CMake target helper follow
+The root `shaders/` files retain the original M0 development-shader lock for the integrity
+manifest. Corrected B1 runtime shaders are versioned under `shaders/b1/` and staged in
+separate target directories. The source organization and small CMake target helper follow
 [gravity_sim](https://github.com/quocthaile/gravity_sim/tree/c98dcd55958420b88e6c5193e954e71ee3f8b574).
 This project retains its own C++17 requirement and dependencies.
-`CPU-geodesic.cpp` and `ray_tracing.cpp` remain reference sources without build targets.
+Historical `CPU-geodesic.cpp` and `ray_tracing.cpp` remain archival sources; the
+independent R0 implementation is under `src/reference/` with dedicated build targets.
 The historical `vs_code/` examples remain; use the CMake workflow below for this layout.
 
 ## Immutable B0 and M0 measurements
@@ -60,12 +69,14 @@ equivalence review. The initial configuration is a static original scene,
 No numerical optimization or speedup is claimed; actual FPS capture remains
 unverified until the external tool and presentation conditions are available.
 
-The historical GPU `rk4Step()` is **Forward Euler**, while the archived CPU file
-contains four-stage RK4. Neither is a validated physical reference. Read the
+The historical GPU `rk4Step()` in B0 is **Forward Euler**, while the archived CPU file
+contains four-stage RK4 with unverified equations. Neither historical implementation is a
+validated physical reference. The corrected `BlackHole3D` development target and frozen
+`BlackHole3D_B1` target use the independently checked Schwarzschild equations and classical
+fixed-step RK4, with the CPU reference and measured limits documented in `docs/b1/`. Read the
 [architecture](docs/baseline_architecture.md),
 [numerical limitations](docs/baseline_numerical_audit.md), and
 [executed checks and remaining limitations](docs/baseline_m0_verification.md).
-CPU reference creation and shader correction belong to future branches.
 
 ## Build
 
@@ -89,7 +100,9 @@ Build any executable independently:
 
 ```powershell
 cmake --build build --config Release --target BlackHole3D
+cmake --build build --config Release --target BlackHole3D_B1
 cmake --build build --config Release --target BlackHole3D_baseline
+cmake --build build --config Release --target BlackHoleGeodesicReference BlackHoleGeodesicReferenceTests BlackHoleB1GpuValidation
 cmake --build build --config Release --target BlackHole2D_baseline
 ```
 
@@ -98,7 +111,7 @@ Developer PowerShell for Visual Studio on Windows):
 
 ```powershell
 cmake -S . -B build-ninja -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-cmake --build build-ninja --target BlackHole3D BlackHole3D_baseline BlackHole2D_baseline
+cmake --build build-ninja --target BlackHole3D BlackHole3D_B1 BlackHole3D_baseline BlackHole2D_baseline
 ```
 
 On Debian/Ubuntu, native packages can replace vcpkg:
@@ -114,7 +127,8 @@ cmake --build build
 
 | Target | Source | Shader source |
 | --- | --- | --- |
-| `BlackHole3D` | `src/black_hole.cpp` | `shaders/` |
+| `BlackHole3D` | `src/black_hole.cpp` | `shaders/b1/` |
+| `BlackHole3D_B1` | `src/b1/black_hole.cpp` | `shaders/b1/` |
 | `BlackHole3D_baseline` | `src/baseline/black_hole.cpp` | `src/baseline/` |
 | `BlackHole2D_baseline` | `src/baseline/2D_lensing.cpp` | None |
 

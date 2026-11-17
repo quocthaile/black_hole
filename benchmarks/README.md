@@ -7,10 +7,14 @@ is `0f74de4ae0fcb6436f95a7a5cd709aa023c93f67`. See
 [numerical audit](../docs/baseline_numerical_audit.md) and
 [executed verification](../docs/baseline_m0_verification.md).
 
-M0 implements only average FPS, mean/median/p95/p99 frame time, frame count and
-measurement duration. No GPU execution timers, memory/utilization metrics,
-numerical corrections or optimization are implemented. A visual smoke check
-does not establish physical correctness or replace timed measurements.
+The M0 scripts compute average FPS, mean/median/p95/p99 frame time, frame count and
+measurement duration; they add no GPU execution timers or memory/utilization metrics.
+The historical M0 record is unchanged. On the B1 development branch, `BlackHole3D`
+uses the corrected equations and RK4, so running the M0 capture protocol now measures
+B0 versus B1 with different physical work. It must not be described as a pure
+presentation-equivalent formatting comparison or used to attribute a performance
+difference solely to integration error. The capture script verifies the deployed B1
+shader files from `shaders/b1/`.
 
 ## Build and integrity
 
