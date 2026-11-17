@@ -1,0 +1,23 @@
+{
+  "coordinate_units": "lengths divided by L0; affine parameter sigma",
+  "metric": "Schwarzschild, signature (-,+,+,+)",
+  "energy_normalization": 1,
+  "schwarzschild_radius": 1,
+  "camera_radius": 10,
+  "impact_parameter": 0,
+  "radial_sign": -1,
+  "radial_direction": [1,0,0],
+  "tangent_direction": [0,1,0],
+  "disk_inner_radius": 2.2000000000000002,
+  "disk_outer_radius": 5.2000000000000002,
+  "disk_normal": [0,1,0],
+  "object_count": 0,
+  "step_size": 0.01,
+  "maximum_steps": 2000,
+  "escape_radius": 100,
+  "termination": "event_horizon",
+  "steps": 901,
+  "trajectory_samples": 902,
+  "event_fraction": 1.6965595595053141e-11,
+  "final_null_residual": null
+}
